@@ -1,0 +1,131 @@
+select * from tab;
+--박지성이 구매한 도서의 출판 수(1-5)
+select count(distinct publisher )as "출판사 수"
+from book, customer, orders 
+where orders.custid = customer.custid 
+	and book.bookid=orders.orderid 
+	and customer.name like '박지성';
+	
+--박지성이 구매한 도서의 이름, 가격, 정가와 판매가격의 차이 (1-6)
+select bookname, price, price-saleprice
+from book,orders,customer
+where orders.bookid=book.bookid and orders.custid=customer.custid and customer.name like '박지성';
+
+--박지성이 구매하지 않은 도서의 이름(1-7)
+select bookname
+from book
+where not exists (select bookname
+				from ORDERS, CUSTOMER
+				where ORDERS.CUSTID=CUSTOMER.CUSTID
+				and book.bookid = ORDERS.bookid
+				and CUSTOMER.NAME LIKE '박지성');
+				
+--주문하지 않은 고객의 이름(1-8)부속질의 사용
+select name from customer where name not in (select name from orders, customer where orders.custid=customer.custid);
+
+--주문 금액의 총액과 주문의 평균금액(1-9)
+select sum(saleprice) as 주문금액총액,avg(saleprice) as 주문평균액 from orders;
+
+--고객의 이름과 고객별 구매액 10
+select name, sum(saleprice) from customer, orders where orders.custid=customer.custid group by name;
+
+--고객의 이름과 고객이 구매한 도서목록 11 (나중에 서브쿼리로 바꿔보기)
+select name, bookname from customer, book, orders where book.bookid=orders.bookid and orders.custid=customer.custid;
+
+--도서의 가격(book 테이블)과 판매가격(order 테이블)의 차이 가 가장 많은 주문(1- 12)
+select orderid from orders (select max(price-saleprice) from orders, book where book.bookid=orders.orderid);
+
+
+select*
+from book, orders
+where book.bookid=orders.bookid
+and price-saleprice=(select max(price-saleprice) from orders,book where book.bookid=orders.bookid);
+
+--도서의 판매액 평균보다 자신의 구매액 평균이 더 높은 고객의 이름
+select name, avg(saleprice)
+from customer, orders 
+where customer.custid=orders.custid 
+group by name
+having avg(saleprice)>(select avg(saleprice) from orders);
+
+--1.박지성이 구매한 도서의 출판사와 같은 출판사에서 도서를 구매한 고객의 이름
+select distinct name from customer, orders where exists (select publisher from book, orders, customer where book.bookid=orders.bookid and customer.custid=orders.custid and customer.name like '박지성')
+
+--1.정답
+--박지성이 산 도서의 출판사a
+select publisher
+from book b, customer c, orders o
+where c.name ='박지성' and c.custid=o.orderid and o.bookid=b.bookid ;
+--같은 출판사에서 도서를 구매한 고객의 이름+a
+select name
+from book b, customer c , orders o
+where name !='박지성' and c.custid=o.custid and o.bookid=b.bookid and publisher in 
+(select distinct publisher
+from book b, customer c, orders o
+where c.name ='박지성' and c.custid=o.orderid and o.bookid=b.bookid);
+
+--2.두개 이상의 서로 다른 출판사에서 도서를 구매한 고객의 이름
+select name from customer, orders, book where customer.custid=orders.custid and book.bookid=orders.bookid group by name having count(distinct publisher)>=2 ;
+
+--2.정답
+--a
+select name, count(distinct publisher)
+from customer c, orders o, book b
+where c.custid=o.custid and b.bookid=o.bookid
+group by name;
+--2건이상 서로다른 출판사에서 도서를 구매한 고객의 이름 구하기
+select name, count(distinct publisher) cnt
+from (a)
+where cnt >= 2;
+
+--합치기
+select name
+from (
+	select name, count(distinct publisher) cnt
+	from customer c, orders o, book b
+	where c.custid=o.custid and b.bookid=o.bookid
+	group by name)
+where cnt >= 2;
+
+
+
+
+
+--3.전체 고객의 30%이상이 구매한도서
+select bookname from book,orders where book.bookid=orders.bookid group by bookname having count(book.bookid)>= (select count(custid)*0.3 from customer);
+
+--전체고객수 
+select count(custid)*0.3 from customer;
+--수동검산
+select * from book where bookid=8 or bookid=10;
+
+--3정답
+--a중에서  a의 cnt가 b보다 더 크거나 같은거 찾기 형식
+select bookname from (A) where cnt >=(B);
+--합친 질의
+select bookname
+from(
+select bookname, count(saleprice) cnt 
+from book b, orders o
+where b.bookid=o.bookid
+group by bookname)
+where cnt >= (select count(*)*0.3 from customer);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
